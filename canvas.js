@@ -2,16 +2,11 @@
 const canvas = document.querySelector('canvas')
 const c = canvas.getContext('2d')
 
-canvas.width = innerWidth
-canvas.height = innerHeight
+canvas.width = window.innerWidth
+canvas.height = window.innerHeight
 
 // Variables
 const mouse = {
-    x: innerWidth / 2,
-    y: innerHeight / 2
-}
-
-const device = {
     x: innerWidth / 2,
     y: innerHeight / 2
 }
@@ -24,14 +19,14 @@ addEventListener('mousemove', event => {
     mouse.y = event.clientY
 })
 
-addEventListener("devicemotion", event => {
-    device.x = event.alpha
-    device.y = event.beta
-})
+document.addEventListener('touchstart', event => {
+    mouse.x = event.targetTouches[0].pageX
+    mouse.y = event.targetTouches[0].pageY    
+});
 
 addEventListener('resize', () => {
-    canvas.width = innerWidth
-    canvas.height = innerHeight
+    canvas.width = window.innerWidth
+    canvas.height = window.innerHeight
 
     init()
 })
@@ -53,63 +48,82 @@ function distance(x1, y1, x2, y2) {
 }
 
 // Objects
-function Stroke(x, y, radius, color, radians) {
+function Particle(x, y, radius, color) {
     this.x = x
     this.y = y
     this.radius = radius
     this.color = color
-    this.radians = radians
-    this.velocity = 0.005;
+    this.radians = Math.random() * Math.PI * 2
+    this.velocity = 0.02
+    this.distanceFromCenter = randomIntFromRange(canvas.width/10, canvas.width/5)
+    this.lastMouse = {
+        x: this.x, 
+        y: this.y
+    }
 
     this.update = function () {
+        const lastPoint = {
+            x: this.x,
+            y: this.y
+        }
+        // Move points over time
         this.radians += this.velocity
-        this.distanceFromCenter = this.radius
-        this.toX = x + Math.cos(this.radians) * this.distanceFromCenter
-        this.toY = y + Math.sin(this.radians) * this.distanceFromCenter
-        this.draw()
+
+        // Drag effect
+        this.lastMouse.x += (mouse.x - this.lastMouse.x) * 0.1
+        this.lastMouse.y += (mouse.y - this.lastMouse.y) * 0.1
+
+        // Circular Motion
+        this.x = this.lastMouse.x + Math.cos(this.radians) * this.distanceFromCenter
+        this.y = this.lastMouse.y + Math.sin(this.radians) * this.distanceFromCenter
+
+        // Draw
+        this.draw(lastPoint)
     }
 
-    this.draw = function () {
-        c.beginPath();
-        c.moveTo(mouse.x, mouse.y);
-        c.lineTo(this.toX, this.toY);
+    this.draw = function (lastPoint) {
+        c.beginPath()
         c.strokeStyle = this.color
+        c.lineWidth = this.radius
+        c.moveTo(lastPoint.x, lastPoint.y)
+        c.lineTo(this.x, this.y)
         c.stroke()
-        
+        c.closePath()
     }
-
 }
 
-
 // Implementation
-let strokes
+let particles
 function init() {
-    strokes = []
+    particles = []
 
-    for (let i = 0; i < 90; i++) {
-        var radians = i*Math.PI/90*2
-        strokes.push(new Stroke(canvas.width / 2, canvas.height / 2, 200, randomColor(colors), radians));
+    for (let i = 0; i < 50; i++) {
+        const radius = randomIntFromRange(5, 10)
+        particles.push(new Particle(canvas.width / 2, canvas.height / 2, radius, randomColor(colors)));
     }
+
+    console.log(canvas.width / 2 + "and" + canvas.height / 2)
 }
 
 // Animation Loop
 function animate() {
     requestAnimationFrame(animate)
-    c.clearRect(0, 0, canvas.width, canvas.height)
+    c.fillStyle = 'rgba(0, 0, 0, 0.1)'
+    c.fillRect(0, 0, canvas.width, canvas.height)
 
-    strokes.forEach(stroke => {
-        stroke.update();
+    particles.forEach(particle => {
+        particle.update();
     });
 
-    /* c.beginPath();
-   c.moveTo(canvas.width / 2, 0);
-   c.lineTo(canvas.width / 2, canvas.height);
-   c.stroke();
+   /*  c.beginPath();
+    c.moveTo(canvas.width / 2, 0);
+    c.lineTo(canvas.width / 2, canvas.height);
+    c.stroke();
 
-   c.beginPath();
-   c.moveTo(0, canvas.height / 2);
-   c.lineTo(canvas.width, canvas.height / 2);
-   c.stroke(); */
+    c.beginPath();
+    c.moveTo(0, canvas.height / 2);
+    c.lineTo(canvas.width, canvas.height / 2);
+    c.stroke(); */
 }
 
 init()
